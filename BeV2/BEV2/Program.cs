@@ -1,14 +1,18 @@
-using BE_V2.DataDB;
+﻿using BE_V2.DataDB;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Hangfire;
+using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Cấu hình tùy chọn JSON
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -17,19 +21,24 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
+// Thêm các dịch vụ vào container
 builder.Services.AddDbContext<DiamondShopV4Context>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add CORS policy to allow only specific origin
+// Thêm chính sách CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin",
-        builder => builder.WithOrigins("http://localhost:3000")
+    options.AddPolicy("AllowAllOrigins",
+        builder => builder.AllowAnyOrigin()
                           .AllowAnyHeader()
                           .AllowAnyMethod());
 });
 
-// Configure JWT authentication
+// Thêm các dịch vụ FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<UserValidator>(); // Thay 'UserValidator' bằng validator của bạn
+
+// Cấu hình xác thực JWT
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
 builder.Services.AddAuthentication(options =>
 {
@@ -54,11 +63,40 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Cấu hình Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Cấu hình dịch vụ Hangfire
+builder.Services.AddHangfire(configuration =>
+    configuration.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+                 .UseSimpleAssemblyNameTypeSerializer()
+                 .UseDefaultTypeSerializer()
+                 .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
+                 {
+                     CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                     SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                     QueuePollInterval = TimeSpan.Zero,
+                     UseRecommendedIsolationLevel = true,
+                     UsePageLocksOnDequeue = true,
+                     DisableGlobalLocks = true
+                 }));
+
+// Thêm máy chủ xử lý nền của Hangfire như một dịch vụ IHostedService
+builder.Services.AddHangfireServer();
+
 var app = builder.Build();
 
+// Cấu hình pipeline xử lý HTTP
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Your API v1");
+        c.RoutePrefix = string.Empty; // Đặt Swagger UI tại gốc của ứng dụng
+    });
 }
 else
 {
@@ -68,12 +106,15 @@ else
 
 app.UseHttpsRedirection();
 app.UseRouting();
-
-app.UseCors("AllowSpecificOrigin"); // Apply the CORS policy
-
-app.UseAuthentication();
+app.UseCors("AllowAllOrigins"); // Sử dụng chính sách CORS
+app.UseAuthentication(); // Kích hoạt middleware xác thực
 app.UseAuthorization();
-
 app.MapControllers();
+
+// Sử dụng Hangfire dashboard (tùy chọn)
+app.UseHangfireDashboard();
+
+// Lên lịch công việc nền chạy mỗi phút
+RecurringJob.AddOrUpdate<EventService>("cleanup-expired-events", service => service.CleanupExpiredEvents(), "*/1 * * * *");
 
 app.Run();

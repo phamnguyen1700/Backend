@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE_V2.DataDB;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BE_V2.Controllers
 {
@@ -70,7 +73,6 @@ namespace BE_V2.Controllers
         [HttpPost]
         public async Task<ActionResult<Diamond>> PostDiamond(Diamond diamond)
         {
-            // Remove the DiamondID to let SQL Server handle the identity column
             _context.Entry(diamond).Property(d => d.DiamondId).IsTemporary = true;
 
             _context.Diamonds.Add(diamond);
@@ -99,5 +101,7 @@ namespace BE_V2.Controllers
         {
             return _context.Diamonds.Any(e => e.DiamondId == id);
         }
+
+        
     }
 }

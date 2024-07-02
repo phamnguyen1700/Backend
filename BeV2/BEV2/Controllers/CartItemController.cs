@@ -21,16 +21,14 @@ namespace BE_V2.Controllers
         [HttpPost]
         public async Task<ActionResult<CartItem>> AddCartItem([FromBody] CartItemDTO cartItemDTO)
         {
-            var cart = await _context.Carts
-                .Include(c => c.CartItems)
-                .FirstOrDefaultAsync(c => c.CartID == cartItemDTO.CartID);
+            var cart = await _context.Carts.Include(c => c.CartItems).FirstOrDefaultAsync(c => c.CartID == cartItemDTO.CartID);
 
             if (cart == null)
             {
                 return NotFound("Cart not found.");
             }
 
-            var existingCartItem = cart.CartItems.FirstOrDefault(ci => ci.ProductID == cartItemDTO.ProductID);
+            var existingCartItem = cart.CartItems.FirstOrDefault(ci => ci.ProductID == cartItemDTO.ProductID && ci.Size == cartItemDTO.Size);
             if (existingCartItem != null)
             {
                 existingCartItem.Quantity += cartItemDTO.Quantity;
@@ -43,7 +41,8 @@ namespace BE_V2.Controllers
                     CartID = cartItemDTO.CartID,
                     ProductID = cartItemDTO.ProductID,
                     Quantity = cartItemDTO.Quantity,
-                    Price = cartItemDTO.Price
+                    Price = cartItemDTO.Price,
+                    Size = cartItemDTO.Size // Include the Size property
                 };
                 cart.CartItems.Add(cartItem);
             }
@@ -57,9 +56,7 @@ namespace BE_V2.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<CartItem>> GetCartItem(int id)
         {
-            var cartItem = await _context.CartItems
-                .Include(ci => ci.Product)
-                .FirstOrDefaultAsync(ci => ci.CartItemID == id);
+            var cartItem = await _context.CartItems.Include(ci => ci.Product).FirstOrDefaultAsync(ci => ci.CartItemID == id);
 
             if (cartItem == null)
             {
@@ -101,10 +98,9 @@ namespace BE_V2.Controllers
 
         // DELETE: api/CartItem/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> RemoveCartItem(int id)
+        public async Task<IActionResult> DeleteCartItem(int id)
         {
             var cartItem = await _context.CartItems.FindAsync(id);
-
             if (cartItem == null)
             {
                 return NotFound();

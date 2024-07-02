@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BEV2")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5ff55c798e910cb8279fad9b43215e6d97c36ff8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a4b6e35b27c6c2ffcdb1b69bf68dfa70bfae7940")]
 [assembly: System.Reflection.AssemblyProductAttribute("BEV2")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BEV2")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

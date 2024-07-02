@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE_V2.DataDB;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -22,8 +21,13 @@ namespace BE_V2.Controllers
         [HttpPost]
         public async Task<ActionResult<Cart>> CreateCart([FromBody] int userId)
         {
-            var existingCart = await _context.Carts
-                .FirstOrDefaultAsync(c => c.UserID == userId);
+            var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+            if (!userExists)
+            {
+                return NotFound("User not found.");
+            }
+
+            var existingCart = await _context.Carts.FirstOrDefaultAsync(c => c.UserID == userId);
 
             if (existingCart != null)
             {
@@ -43,37 +47,7 @@ namespace BE_V2.Controllers
             return CreatedAtAction(nameof(GetCartByUserId), new { userId = cart.UserID }, cart);
         }
 
-        // GET: api/Cart/{userId}
-        [HttpGet("{userId}")]
-        public async Task<ActionResult<IEnumerable<CartItem>>> GetCart(int userId)
-        {
-            var cart = await _context.Carts
-                .Include(c => c.CartItems)
-                .ThenInclude(ci => ci.Product)
-                .FirstOrDefaultAsync(c => c.UserID == userId);
-
-            if (cart == null)
-            {
-                return NotFound();
-            }
-
-            return cart.CartItems.ToList();
-        }
-
-        [HttpGet("User/{userId}/Count")]
-        public async Task<ActionResult<int>> GetCartItemCount(int userId)
-        {
-            var cart = await _context.Carts.Include(c => c.CartItems)
-                                           .FirstOrDefaultAsync(c => c.UserID == userId);
-
-            if (cart == null)
-            {
-                return NotFound(new { Message = "Cart not found for userId: " + userId });
-            }
-
-            return Ok(cart.CartItems.Count);
-        }
-
+        // GET: api/Cart/User/{userId}
         [HttpGet("User/{userId}")]
         public async Task<ActionResult<Cart>> GetCartByUserId(int userId)
         {
@@ -90,7 +64,21 @@ namespace BE_V2.Controllers
             return cart;
         }
 
+        // DELETE: api/Cart/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCart(int id)
+        {
+            var cart = await _context.Carts.Include(c => c.CartItems).FirstOrDefaultAsync(c => c.CartID == id);
+            if (cart == null)
+            {
+                return NotFound();
+            }
 
+            _context.Carts.Remove(cart);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
 
         private bool CartExists(int userId)
         {

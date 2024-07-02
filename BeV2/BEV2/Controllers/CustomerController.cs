@@ -53,12 +53,14 @@ namespace BE_V2.Controllers
 
             return Ok(new
             {
+                customer.CustomerId,  // Include CustomerId here
                 customer.User.Name,
                 customer.User.PhoneNumber,
                 customer.User.Email,
                 customer.User.Address
             });
         }
+
 
         // PUT: api/Customers/5
         [HttpPut("{id}")]

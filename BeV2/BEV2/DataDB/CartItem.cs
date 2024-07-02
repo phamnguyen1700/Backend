@@ -21,6 +21,8 @@ namespace BE_V2.DataDB
         [Required]
         public decimal Price { get; set; }
 
+        public string Size { get; set; } // Add this line
+
         [ForeignKey("CartID")]
         public virtual Cart Cart { get; set; }
 

@@ -1,4 +1,4 @@
-    namespace BE_V2.Models
+namespace BE_V2.Models
 {
     public class ErrorViewModel
     {

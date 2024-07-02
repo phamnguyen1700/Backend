@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <parameters>
-  <parameter name="IIS Web Application Name" description="" value="luxejewelhouse" tags="IisApp">
-    <parameterEntry kind="ProviderPath" scope="IisApp" match="^D:\\SWP\\SWP-SU2024\\SWP-SU2024\\BeV2\\BEV2\\obj\\Release\\net8\.0\\PubTmp\\Out\\$" />
+  <parameter name="IIS Web Application Name" description="" value="luxehouse" tags="IisApp">
+    <parameterEntry kind="ProviderPath" scope="IisApp" match="^D:\\SWP\ GITHUB\\Backend\\BeV2\\BEV2\\obj\\Release\\net8\.0\\PubTmp\\Out\\$" />
   </parameter>
 </parameters>

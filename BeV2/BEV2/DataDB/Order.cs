@@ -8,6 +8,11 @@ namespace BE_V2.DataDB;
 
 public partial class Order
 {
+    public Order()
+    {
+        OrderLogs = new HashSet<OrderLog>();
+    }
+
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int OrderId { get; set; }
@@ -25,4 +30,7 @@ public partial class Order
 
     [JsonIgnore]
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+    [JsonIgnore]
+    public virtual ICollection<OrderLog> OrderLogs { get; set; } = new List<OrderLog>();
 }
