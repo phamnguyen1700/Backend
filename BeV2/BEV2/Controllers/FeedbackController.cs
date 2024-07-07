@@ -17,6 +17,20 @@ namespace BE_V2.Controllers
             _context = context;
         }
 
+        // GET: api/Feedback
+        [HttpGet]
+        public async Task<IActionResult> GetAllFeedback()
+        {
+            var feedbacks = await _context.Feedbacks.ToListAsync();
+
+            if (feedbacks == null || feedbacks.Count == 0)
+            {
+                return NotFound(new { Message = "No feedback found." });
+            }
+
+            return Ok(feedbacks);
+        }
+
         // GET: api/Feedback/{productId}
         [HttpGet("{productId}")]
         public async Task<IActionResult> GetFeedbackByProductId(int productId)

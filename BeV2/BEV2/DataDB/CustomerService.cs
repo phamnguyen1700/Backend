@@ -40,11 +40,13 @@ namespace BE_V2.Services
             {
                 return orderTotal;
             }
+
             var customerPoints = await _context.CustomerPoints.FirstOrDefaultAsync(cp => cp.CustomerID == customerId);
             if (customerPoints == null || customerPoints.Points == 0)
             {
                 throw new Exception("No points available");
             }
+
             var discount = customerPoints.Points * 0.25m / 100;
             var discountedTotal = orderTotal * (1 - discount);
 
@@ -53,6 +55,20 @@ namespace BE_V2.Services
             await _context.SaveChangesAsync();
 
             return discountedTotal;
+        }
+
+        public async Task<CustomerPointsDTO> GetCustomerPointsAsync(int customerId)
+        {
+            var customerPoints = await _context.CustomerPoints.FirstOrDefaultAsync(cp => cp.CustomerID == customerId);
+            if (customerPoints == null)
+                return null;
+
+            return new CustomerPointsDTO
+            {
+                CustomerID = customerPoints.CustomerID,
+                Points = customerPoints.Points,
+                LastUpdated = customerPoints.LastUpdated
+            };
         }
     }
 }

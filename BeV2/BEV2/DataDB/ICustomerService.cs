@@ -7,5 +7,7 @@ namespace BE_V2.Services
     {
         Task<int> AddPointsAsync(CustomerPointsDTO pointsDTO);
         Task<decimal> ApplyDiscountAsync(int customerId, decimal orderTotal, bool usePoints);
+        Task<CustomerPointsDTO> GetCustomerPointsAsync(int customerId);
+
     }
 }

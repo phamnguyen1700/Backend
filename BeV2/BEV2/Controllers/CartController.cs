@@ -19,15 +19,15 @@ namespace BE_V2.Controllers
 
         // POST: api/Cart
         [HttpPost]
-        public async Task<ActionResult<Cart>> CreateCart([FromBody] int userId)
+        public async Task<ActionResult<Cart>> CreateCart([FromBody] CreateCartRequest request)
         {
-            var userExists = await _context.Users.AnyAsync(u => u.UserId == userId);
+            var userExists = await _context.Users.AnyAsync(u => u.UserId == request.UserId);
             if (!userExists)
             {
                 return NotFound("User not found.");
             }
 
-            var existingCart = await _context.Carts.FirstOrDefaultAsync(c => c.UserID == userId);
+            var existingCart = await _context.Carts.FirstOrDefaultAsync(c => c.UserID == request.UserId);
 
             if (existingCart != null)
             {
@@ -36,7 +36,7 @@ namespace BE_V2.Controllers
 
             var cart = new Cart
             {
-                UserID = userId,
+                UserID = request.UserId,
                 CreatedAt = DateTime.UtcNow,
                 CartItems = new List<CartItem>()
             };
@@ -83,6 +83,11 @@ namespace BE_V2.Controllers
         private bool CartExists(int userId)
         {
             return _context.Carts.Any(e => e.UserID == userId);
+        }
+
+        public class CreateCartRequest
+        {
+            public int UserId { get; set; }
         }
     }
 }

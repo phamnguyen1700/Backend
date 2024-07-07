@@ -107,27 +107,42 @@ public class OrderLogsController : ControllerBase
                 }
                 break;
             case "phase2":
-                if (!orderLog.Phase2)
+                if (orderLog.Phase1 && !orderLog.Phase2) // Check if Phase1 is true
                 {
                     orderLog.Phase2 = true;
                     orderLog.TimePhase2 = DateTime.UtcNow;
                     Console.WriteLine("Updated Phase2 and TimePhase2.");
                 }
+                else
+                {
+                    Console.WriteLine("Cannot activate Phase2 without Phase1 being activated.");
+                    return BadRequest("Cannot activate Phase2 without Phase1 being activated.");
+                }
                 break;
             case "phase3":
-                if (!orderLog.Phase3)
+                if (orderLog.Phase2 && !orderLog.Phase3) // Check if Phase2 is true
                 {
                     orderLog.Phase3 = true;
                     orderLog.TimePhase3 = DateTime.UtcNow;
                     Console.WriteLine("Updated Phase3 and TimePhase3.");
                 }
+                else
+                {
+                    Console.WriteLine("Cannot activate Phase3 without Phase2 being activated.");
+                    return BadRequest("Cannot activate Phase3 without Phase2 being activated.");
+                }
                 break;
             case "phase4":
-                if (!orderLog.Phase4)
+                if (orderLog.Phase3 && !orderLog.Phase4) // Check if Phase3 is true
                 {
                     orderLog.Phase4 = true;
                     orderLog.TimePhase4 = DateTime.UtcNow;
                     Console.WriteLine("Updated Phase4 and TimePhase4.");
+                }
+                else
+                {
+                    Console.WriteLine("Cannot activate Phase4 without Phase3 being activated.");
+                    return BadRequest("Cannot activate Phase4 without Phase3 being activated.");
                 }
                 break;
             default:

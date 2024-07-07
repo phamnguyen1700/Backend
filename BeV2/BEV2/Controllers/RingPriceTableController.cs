@@ -35,4 +35,17 @@ public class RingPriceTableController : ControllerBase
 
         return ringPriceTable;
     }
+
+    // GET: api/RingPriceTable/{material}/{caratWeight}/sizes
+    [HttpGet("{material}/{caratWeight}/sizes")]
+    public async Task<ActionResult<IEnumerable<decimal>>> GetRingSizes(string material, decimal caratWeight)
+    {
+        var sizes = await _context.RingPriceTable
+            .Where(rpt => rpt.Material == material && rpt.CaratWeight == caratWeight)
+            .Select(rpt => rpt.Size)
+            .Distinct()
+            .ToListAsync();
+
+        return Ok(sizes);
+    }
 }

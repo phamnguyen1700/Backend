@@ -33,4 +33,7 @@ public partial class Order
 
     [JsonIgnore]
     public virtual ICollection<OrderLog> OrderLogs { get; set; } = new List<OrderLog>();
+
+    [JsonIgnore]
+    public virtual ICollection<Warranty> Warranties { get; set; } // Add this line
 }

@@ -1,0 +1,105 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            border: 1px solid #000;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .header .logo {
+                display: flex;
+                align-items: center;
+            }
+
+            .header img {
+                height: 100px;
+                margin-left: 100px;
+            }
+
+        .order-details {
+            border: 1px solid #000;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+            .order-details .product {
+                border: 1px solid #000;
+                margin-bottom: 5px;
+                padding: 5px;
+            }
+
+        .thankyou {
+            text-align: center;
+            font-size: xx-large;
+            font-weight: 600;
+            padding-bottom: 50px;
+        }
+
+        .info-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+            .info-table td {
+                padding: 10px;
+                vertical-align: top;
+            }
+
+        .info-column {
+            width: 48%;
+        }
+
+        .total-info {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <p>Order ID: {OrderId}</p>
+                <p>Day Created: {DayCreated}</p>
+            </div>
+            <div class="logo">
+                <img src="https://firebasestorage.googleapis.com/v0/b/swp-diamond-shop.appspot.com/o/Logo%2Flogo.png?alt=media&token=30ea2057-9136-4503-80c9-26befd064907" alt="Logo">
+            </div>
+        </div>
+        <div class="thankyou">
+            <p>Thank you for choosing us</p>
+        </div>
+        <div class="order-details">
+            <h3>Order Details</h3>
+            {OrderDetails}
+        </div>
+        <table class="info-table">
+            <tr>
+                <td class="info-column">
+                    <h3>Customer Information</h3>
+                    <p>Name: {CustomerName}</p>
+                    <p>Email: {CustomerEmail}</p>
+                </td>
+                <td class="info-column total-info">
+                    <h3>Payment Information</h3>
+                    <p>Total Price: ${TotalAmount}</p>
+                    <p>Deposit: ${Deposit}</p>
+                    <p>Amount Paid: ${AmountPaid}</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

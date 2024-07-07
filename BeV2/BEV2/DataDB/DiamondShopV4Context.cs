@@ -37,6 +37,8 @@ namespace BE_V2.DataDB
         public virtual DbSet<NecklacePriceTable> NecklacePriceTable { get; set; }
         public virtual DbSet<RingMold> RingMold { get; set; }
         public virtual DbSet<NecklaceMold> NecklaceMold { get; set; }
+        public virtual DbSet<Certificate> Certificates { get; set; }
+        public virtual DbSet<Warranty> Warranties { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -68,12 +70,9 @@ namespace BE_V2.DataDB
             modelBuilder.Entity<Diamond>(entity =>
             {
                 entity.HasKey(e => e.DiamondId).HasName("PK__Diamond__23A8E7BBE47D50DC");
-
                 entity.ToTable("Diamond");
-
                 entity.Property(e => e.DiamondId).HasColumnName("DiamondID");
                 entity.Property(e => e.CaratWeight).HasColumnType("decimal(10, 2)");
-                entity.Property(e => e.Certificate).HasMaxLength(255);
                 entity.Property(e => e.Clarity).HasMaxLength(50);
                 entity.Property(e => e.Color).HasMaxLength(50);
                 entity.Property(e => e.Cut).HasMaxLength(50);
@@ -85,7 +84,24 @@ namespace BE_V2.DataDB
                 entity.Property(e => e.Shape).HasMaxLength(50);
                 entity.Property(e => e.Symmetry).HasMaxLength(50);
                 entity.Property(e => e.Tables).HasColumnType("decimal(10, 2)");
+                entity.Property(e => e.Origin).HasMaxLength(255);
+
+                entity.HasOne(d => d.Certificate)
+                    .WithOne(c => c.Diamond)
+                    .HasForeignKey<Certificate>(c => c.DiamondId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
+
+            modelBuilder.Entity<Certificate>(entity =>
+            {
+                entity.HasKey(e => e.CertificateId);
+
+                entity.Property(e => e.ReportNumber).HasMaxLength(50);
+                entity.Property(e => e.ClarityCharacteristics).HasMaxLength(100);
+                entity.Property(e => e.Inscription).HasMaxLength(100);
+                entity.Property(e => e.Comments).HasMaxLength(255);
+            });
+
 
             modelBuilder.Entity<Feedback>(entity =>
             {
@@ -114,7 +130,7 @@ namespace BE_V2.DataDB
 
                 entity.Property(e => e.OrderId).HasColumnName("OrderID");
                 entity.Property(e => e.CustomerId).HasColumnName("CustomerID");
-                entity.Property(e => e.TotalPrice).HasColumnType("decimal(10, 2)");
+                entity.Property(e => e.TotalPrice).HasColumnType("decimal(15, 2)");
 
                 entity.HasOne(d => d.Customer).WithMany(p => p.Orders)
                     .HasForeignKey(d => d.CustomerId)
@@ -129,7 +145,7 @@ namespace BE_V2.DataDB
                 entity.Property(e => e.OrderId).HasColumnName("OrderID");
                 entity.Property(e => e.ProductId).HasColumnName("ProductID");
                 entity.Property(e => e.ProductName).HasMaxLength(255);
-                entity.Property(e => e.ProductPrice).HasColumnType("decimal(10, 2)");
+                entity.Property(e => e.ProductPrice).HasColumnType("decimal(15, 2)");
 
                 entity.HasOne(d => d.Order).WithMany(p => p.OrderDetails)
                     .HasForeignKey(d => d.OrderId)
@@ -147,10 +163,10 @@ namespace BE_V2.DataDB
                 entity.ToTable("Payment");
 
                 entity.Property(e => e.PaymentId).HasColumnName("PaymentID");
-                entity.Property(e => e.AmountPaid).HasColumnType("decimal(10, 2)");
-                entity.Property(e => e.Deposit).HasColumnType("decimal(10, 2)");
+                entity.Property(e => e.AmountPaid).HasColumnType("decimal(15, 2)");
+                entity.Property(e => e.Deposit).HasColumnType("decimal(15, 2)");
                 entity.Property(e => e.OrderId).HasColumnName("OrderID");
-                entity.Property(e => e.Total).HasColumnType("decimal(10, 2)");
+                entity.Property(e => e.Total).HasColumnType("decimal(15, 2)");
 
                 entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                     .HasForeignKey(d => d.OrderId)
@@ -289,7 +305,7 @@ namespace BE_V2.DataDB
                 entity.Property(e => e.CartID).HasColumnName("CartID");
                 entity.Property(e => e.ProductID).HasColumnName("ProductID");
                 entity.Property(e => e.Quantity).IsRequired();
-                entity.Property(e => e.Price).HasColumnType("decimal(10, 2)").IsRequired();
+                entity.Property(e => e.Price).HasColumnType("decimal(15, 2)").IsRequired();
 
                 entity.HasOne(d => d.Cart)
                     .WithMany(p => p.CartItems)
@@ -471,6 +487,17 @@ namespace BE_V2.DataDB
                 entity.Property(e => e.CaratWeight).HasColumnType("decimal(3, 2)");
                 entity.Property(e => e.BasePrice).HasColumnType("decimal(18, 2)");
             });
+
+            modelBuilder.Entity<Warranty>(entity =>
+            {
+                entity.HasKey(e => e.WarrantyId);
+                entity.Property(e => e.StoreRepresentativeSignature).IsRequired();
+
+                entity.HasOne(e => e.Order)
+                      .WithMany(o => o.Warranties) // Make sure to update Order entity to include this relationship
+                      .HasForeignKey(e => e.OrderId);
+            });
+
 
             OnModelCreatingPartial(modelBuilder);
         }

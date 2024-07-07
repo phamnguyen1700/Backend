@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BE_V2.Migrations
 {
     [DbContext(typeof(DiamondShopV4Context))]
-    [Migration("20240702064630_create")]
+    [Migration("20240706081649_create")]
     partial class create
     {
         /// <inheritdoc />
@@ -65,7 +65,7 @@ namespace BE_V2.Migrations
                         .HasColumnName("CartID");
 
                     b.Property<decimal>("Price")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
                     b.Property<int>("ProductID")
                         .HasColumnType("int")
@@ -86,6 +86,48 @@ namespace BE_V2.Migrations
                     b.HasIndex("ProductID");
 
                     b.ToTable("CartItem", (string)null);
+                });
+
+            modelBuilder.Entity("BE_V2.DataDB.Certificate", b =>
+                {
+                    b.Property<int>("CertificateId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CertificateId"));
+
+                    b.Property<string>("ClarityCharacteristics")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Comments")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int>("DiamondId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Inscription")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReportNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("CertificateId");
+
+                    b.HasIndex("DiamondId")
+                        .IsUnique();
+
+                    b.ToTable("Certificates");
                 });
 
             modelBuilder.Entity("BE_V2.DataDB.Customer", b =>
@@ -152,10 +194,6 @@ namespace BE_V2.Migrations
                     b.Property<decimal?>("CaratWeight")
                         .HasColumnType("decimal(10, 2)");
 
-                    b.Property<string>("Certificate")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
                     b.Property<string>("Clarity")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -183,6 +221,10 @@ namespace BE_V2.Migrations
                         .HasColumnType("decimal(10, 2)");
 
                     b.Property<string>("Measurements")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Origin")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
@@ -393,7 +435,7 @@ namespace BE_V2.Migrations
                         .HasColumnType("date");
 
                     b.Property<decimal?>("TotalPrice")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
                     b.HasKey("OrderId")
                         .HasName("PK__Orders__C3905BAF84671313");
@@ -425,7 +467,7 @@ namespace BE_V2.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<decimal?>("ProductPrice")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
                     b.Property<int?>("Quantity")
                         .HasColumnType("int");
@@ -502,20 +544,20 @@ namespace BE_V2.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaymentId"));
 
                     b.Property<decimal?>("AmountPaid")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
                     b.Property<DateOnly?>("DatePaid")
                         .HasColumnType("date");
 
                     b.Property<decimal?>("Deposit")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
                     b.Property<int?>("OrderId")
                         .HasColumnType("int")
                         .HasColumnName("OrderID");
 
                     b.Property<decimal?>("Total")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
                     b.HasKey("PaymentId")
                         .HasName("PK__Payment__9B556A58C7262DC1");
@@ -712,6 +754,34 @@ namespace BE_V2.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("BE_V2.DataDB.Warranty", b =>
+                {
+                    b.Property<int>("WarrantyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WarrantyId"));
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PurchaseDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("StoreRepresentativeSignature")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("WarrantyEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("WarrantyId");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Warranties");
+                });
+
             modelBuilder.Entity("BE_V2.DataDB.Wishlist", b =>
                 {
                     b.Property<int>("WishlistId")
@@ -885,6 +955,17 @@ namespace BE_V2.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("BE_V2.DataDB.Certificate", b =>
+                {
+                    b.HasOne("BE_V2.DataDB.Diamond", "Diamond")
+                        .WithOne("Certificate")
+                        .HasForeignKey("BE_V2.DataDB.Certificate", "DiamondId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Diamond");
+                });
+
             modelBuilder.Entity("BE_V2.DataDB.Customer", b =>
                 {
                     b.HasOne("BE_V2.DataDB.User", "User")
@@ -1016,6 +1097,17 @@ namespace BE_V2.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("BE_V2.DataDB.Warranty", b =>
+                {
+                    b.HasOne("BE_V2.DataDB.Order", "Order")
+                        .WithMany("Warranties")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("BE_V2.DataDB.Wishlist", b =>
                 {
                     b.HasOne("BE_V2.DataDB.Customer", "Customer")
@@ -1105,6 +1197,8 @@ namespace BE_V2.Migrations
 
             modelBuilder.Entity("BE_V2.DataDB.Diamond", b =>
                 {
+                    b.Navigation("Certificate");
+
                     b.Navigation("Products");
                 });
 
@@ -1120,6 +1214,8 @@ namespace BE_V2.Migrations
                     b.Navigation("OrderLogs");
 
                     b.Navigation("Payments");
+
+                    b.Navigation("Warranties");
                 });
 
             modelBuilder.Entity("BE_V2.DataDB.ProductType", b =>

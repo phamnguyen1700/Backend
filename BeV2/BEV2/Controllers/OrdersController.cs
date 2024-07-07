@@ -50,6 +50,16 @@ namespace BE_V2.Controllers
             _context.OrderDetails.AddRange(orderDetails);
             await _context.SaveChangesAsync();
 
+            // Create an OrderLog entry
+            var orderLog = new OrderLog
+            {
+                OrderID = order.OrderId,
+                Phase1 = false,
+                TimePhase1 = DateTime.UtcNow
+            };
+            _context.OrderLogs.Add(orderLog);
+            await _context.SaveChangesAsync();
+
             // Clear the cart after successful order creation
             var cart = await _context.Carts.Include(c => c.CartItems).FirstOrDefaultAsync(c => c.UserID == orderDTO.UserID);
             if (cart != null)

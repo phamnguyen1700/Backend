@@ -13,4 +13,12 @@ namespace BE_V2.DTOs
 
         public DateTime LastUpdated { get; set; } = DateTime.Now;
     }
+
+    public class PurchaseRequest
+    {
+        public int CustomerId { get; set; }
+        public int Quantity { get; set; }
+        public decimal OrderTotal { get; set; }
+        public bool UsePoints { get; set; }
+    }
 }

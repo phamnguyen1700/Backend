@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BE_V2.DataDB;
+using Newtonsoft.Json;
 
 namespace BE_V2.Controllers
 {
@@ -226,6 +227,23 @@ namespace BE_V2.Controllers
                     if (mainDiamondPriceEntry != null)
                     {
                         mainDiamondPrice = mainDiamondPriceEntry.Price;
+                        switch (mainDiamond.Origin)
+                        {
+                            case "South Africa":
+                                mainDiamondPrice *= 1.1m; // Apply 10% increase for South Africa
+                                break;
+                            case "Russia":
+                                mainDiamondPrice *= 1.2m; // Apply 20% increase for Russia
+                                break;
+                            case "Canada":
+                                mainDiamondPrice *= 1.15m; // Apply 15% increase for Canada
+                                break;
+                            case "Botswana":
+                                mainDiamondPrice *= 1.25m; // Apply 25% increase for Botswana
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             }
@@ -240,13 +258,315 @@ namespace BE_V2.Controllers
                     if (secondaryDiamondPriceEntry != null)
                     {
                         secondaryDiamondPrice = secondaryDiamondPriceEntry.Price;
+                        switch (secondaryDiamond.Origin)
+                        {
+                            case "South Africa":
+                                secondaryDiamondPrice *= 1.1m; // Apply 10% increase for South Africa
+                                break;
+                            case "Russia":
+                                secondaryDiamondPrice *= 1.2m; // Apply 20% increase for Russia
+                                break;
+                            case "Canada":
+                                secondaryDiamondPrice *= 1.15m; // Apply 15% increase for Canada
+                                break;
+                            case "Botswana":
+                                secondaryDiamondPrice *= 1.25m; // Apply 25% increase for Botswana
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             }
 
             // Calculate the final price
-            decimal finalPrice = (moldPrice + mainDiamondPrice + (secondaryDiamondPrice * (product.SecondaryDiamondCount ?? 0)) + (product.ProcessingPrice ?? 0)) * (product.ExchangeRate ?? 1);
+            decimal exchangeRateMultiplier = (product.ExchangeRate ?? 0) / 100 + 1;
+            decimal finalPrice = (moldPrice + mainDiamondPrice + (secondaryDiamondPrice * (product.SecondaryDiamondCount ?? 0)) + (product.ProcessingPrice ?? 0)) * exchangeRateMultiplier;
+
+            finalPrice = Math.Floor(finalPrice / 100000) * 100000;
             return finalPrice;
         }
+
+
+        [HttpPost("CreateOrGetProductWithSize")]
+        public async Task<ActionResult<Product>> CreateOrGetProductWithSize([FromBody] CreateOrGetProductWithSizeRequest request)
+        {
+            // Fetch the existing product
+            var existingProduct = await _context.Products
+                .Include(p => p.MainDiamond)
+                .Include(p => p.SecondaryDiamond)
+                .Include(p => p.ProductTypeNavigation)
+                .Include(p => p.RingMold)
+                .Include(p => p.NecklaceMold)
+                .FirstOrDefaultAsync(p => p.ProductId == request.ProductId);
+
+            if (existingProduct == null)
+            {
+                return NotFound();
+            }
+
+            // Convert size to decimal for price table lookup
+            if (!decimal.TryParse(request.Size, out decimal sizeDecimal))
+            {
+                return BadRequest("Invalid size format.");
+            }
+
+            // Fetch the ring price based on the selected size
+            var ringPriceTable = await _context.RingPriceTable
+                .FirstOrDefaultAsync(rpt => rpt.Material == existingProduct.RingMold.Material &&
+                                            rpt.Size == sizeDecimal &&
+                                            rpt.CaratWeight == existingProduct.RingMold.CaratWeight);
+
+            if (ringPriceTable == null)
+            {
+                return NotFound("Ring price for the selected size not found.");
+            }
+
+            // Check if a ring mold with the requested size already exists
+            var existingRingMold = await _context.RingMold
+                .FirstOrDefaultAsync(rm => rm.Material == existingProduct.RingMold.Material &&
+                                            rm.CaratWeight == existingProduct.RingMold.CaratWeight &&
+                                            rm.Gender == existingProduct.RingMold.Gender &&
+                                            rm.RingType == existingProduct.RingMold.RingType &&
+                                            rm.Size == request.Size);
+
+            if (existingRingMold != null)
+            {
+                // Return existing product with the requested ring mold size
+                var productWithExistingSize = await _context.Products
+                    .FirstOrDefaultAsync(p => p.RingMoldId == existingRingMold.RingMoldId && p.ProductType == 2);
+
+                return Ok(productWithExistingSize);
+            }
+
+            // Create a new ring mold with the requested size
+            var newRingMold = new RingMold
+            {
+                Material = existingProduct.RingMold.Material,
+                CaratWeight = existingProduct.RingMold.CaratWeight,
+                Gender = existingProduct.RingMold.Gender,
+                RingType = existingProduct.RingMold.RingType,
+                BasePrice = ringPriceTable.BasePrice, // Use the dynamically fetched price
+                Size = request.Size
+            };
+
+            _context.RingMold.Add(newRingMold);
+            await _context.SaveChangesAsync();
+
+            // Create a new product with the new ring mold
+            var newProduct = new Product
+            {
+                ProductName = existingProduct.ProductName,
+                ProductType = existingProduct.ProductType,
+                Material = existingProduct.Material,
+                Size = request.Size,
+                Description = existingProduct.Description,
+                Price = CalculateNewPrice(existingProduct, newRingMold.BasePrice),
+                ProcessingPrice = existingProduct.ProcessingPrice,
+                ExchangeRate = existingProduct.ExchangeRate,
+                Quantity = existingProduct.Quantity,
+                MainDiamondId = existingProduct.MainDiamondId,
+                Image1 = existingProduct.Image1,
+                Image2 = existingProduct.Image2,
+                Image3 = existingProduct.Image3,
+                SecondaryDiamondId = existingProduct.SecondaryDiamondId,
+                RingMoldId = newRingMold.RingMoldId
+            };
+
+            _context.Products.Add(newProduct);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetProduct", new { id = newProduct.ProductId }, newProduct);
+        }
+
+        public class CreateOrGetProductWithSizeRequest
+        {
+            public int ProductId { get; set; }
+            public string Size { get; set; }
+        }
+
+        private decimal CalculateNewPrice(Product product, decimal newRingMoldBasePrice)
+        {
+            // Fetch prices
+            decimal mainDiamondPrice = 0;
+            decimal secondaryDiamondPrice = 0;
+
+            if (product.MainDiamondId != null)
+            {
+                var mainDiamond = _context.Diamonds.Find(product.MainDiamondId);
+                if (mainDiamond != null)
+                {
+                    var mainDiamondPriceEntry = _context.DiamondPriceTable
+                        .FirstOrDefault(d => d.Carat == mainDiamond.CaratWeight && d.Color == mainDiamond.Color && d.Clarity == mainDiamond.Clarity && d.Cut == mainDiamond.Cut);
+                    if (mainDiamondPriceEntry != null)
+                    {
+                        mainDiamondPrice = mainDiamondPriceEntry.Price;
+                        switch (mainDiamond.Origin)
+                        {
+                            case "South Africa":
+                                mainDiamondPrice *= 1.1m; // Apply 10% increase for South Africa
+                                break;
+                            case "Russia":
+                                mainDiamondPrice *= 1.2m; // Apply 20% increase for Russia
+                                break;
+                            case "Canada":
+                                mainDiamondPrice *= 1.15m; // Apply 15% increase for Canada
+                                break;
+                            case "Botswana":
+                                mainDiamondPrice *= 1.25m; // Apply 25% increase for Botswana
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+
+            if (product.SecondaryDiamondId != null)
+            {
+                var secondaryDiamond = _context.Diamonds.Find(product.SecondaryDiamondId);
+                if (secondaryDiamond != null)
+                {
+                    var secondaryDiamondPriceEntry = _context.DiamondPriceTable
+                        .FirstOrDefault(d => d.Carat == secondaryDiamond.CaratWeight && d.Color == secondaryDiamond.Color && d.Clarity == secondaryDiamond.Clarity && d.Cut == secondaryDiamond.Cut);
+                    if (secondaryDiamondPriceEntry != null)
+                    {
+                        secondaryDiamondPrice = secondaryDiamondPriceEntry.Price;
+                        switch (secondaryDiamond.Origin)
+                        {
+                            case "South Africa":
+                                secondaryDiamondPrice *= 1.1m; // Apply 10% increase for South Africa
+                                break;
+                            case "Russia":
+                                secondaryDiamondPrice *= 1.2m; // Apply 20% increase for Russia
+                                break;
+                            case "Canada":
+                                secondaryDiamondPrice *= 1.15m; // Apply 15% increase for Canada
+                                break;
+                            case "Botswana":
+                                secondaryDiamondPrice *= 1.25m; // Apply 25% increase for Botswana
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // Calculate the final price
+            decimal exchangeRateMultiplier = (product.ExchangeRate ?? 0) / 100 + 1;
+            decimal finalPrice = (newRingMoldBasePrice + mainDiamondPrice + (secondaryDiamondPrice * (product.SecondaryDiamondCount ?? 0)) + (product.ProcessingPrice ?? 0)) * exchangeRateMultiplier;
+
+            finalPrice = Math.Floor(finalPrice / 100000) * 100000;
+            return finalPrice;
+        }
+
+
+        [HttpPost("CalculatePrice")]
+        public async Task<ActionResult<decimal>> CalculatePrice(CalculatePriceRequest request)
+        {
+            decimal moldPrice = 0;
+            decimal mainDiamondPrice = 0;
+            decimal secondaryDiamondPrice = 0;
+
+            // Fetch the ring mold price based on the size
+            if (request.ProductType == 2)
+            {
+                var ringPriceTable = await _context.RingPriceTable
+                    .FirstOrDefaultAsync(rpt => rpt.Material == request.Material &&
+                                                rpt.Size == decimal.Parse(request.Size) &&
+                                                rpt.CaratWeight == request.CaratWeight);
+                if (ringPriceTable != null)
+                {
+                    moldPrice = ringPriceTable.BasePrice;
+                }
+            }
+
+            // Fetch the main diamond price
+            if (request.MainDiamondId != null)
+            {
+                var mainDiamond = _context.Diamonds.Find(request.MainDiamondId);
+                if (mainDiamond != null)
+                {
+                    var mainDiamondPriceEntry = _context.DiamondPriceTable
+                        .FirstOrDefault(d => d.Carat == mainDiamond.CaratWeight && d.Color == mainDiamond.Color && d.Clarity == mainDiamond.Clarity && d.Cut == mainDiamond.Cut);
+                    if (mainDiamondPriceEntry != null)
+                    {
+                        mainDiamondPrice = mainDiamondPriceEntry.Price;
+                        switch (mainDiamond.Origin)
+                        {
+                            case "South Africa":
+                                mainDiamondPrice *= 1.1m; // Apply 10% increase for South Africa
+                                break;
+                            case "Russia":
+                                mainDiamondPrice *= 1.2m; // Apply 20% increase for Russia
+                                break;
+                            case "Canada":
+                                mainDiamondPrice *= 1.15m; // Apply 15% increase for Canada
+                                break;
+                            case "Botswana":
+                                mainDiamondPrice *= 1.25m; // Apply 25% increase for Botswana
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+
+            if (request.SecondaryDiamondId != null)
+            {
+                var secondaryDiamond = _context.Diamonds.Find(request.SecondaryDiamondId);
+                if (secondaryDiamond != null)
+                {
+                    var secondaryDiamondPriceEntry = _context.DiamondPriceTable
+                        .FirstOrDefault(d => d.Carat == secondaryDiamond.CaratWeight && d.Color == secondaryDiamond.Color && d.Clarity == secondaryDiamond.Clarity && d.Cut == secondaryDiamond.Cut);
+                    if (secondaryDiamondPriceEntry != null)
+                    {
+                        secondaryDiamondPrice = secondaryDiamondPriceEntry.Price;
+                        switch (secondaryDiamond.Origin)
+                        {
+                            case "South Africa":
+                                secondaryDiamondPrice *= 1.1m; // Apply 10% increase for South Africa
+                                break;
+                            case "Russia":
+                                secondaryDiamondPrice *= 1.2m; // Apply 20% increase for Russia
+                                break;
+                            case "Canada":
+                                secondaryDiamondPrice *= 1.15m; // Apply 15% increase for Canada
+                                break;
+                            case "Botswana":
+                                secondaryDiamondPrice *= 1.25m; // Apply 25% increase for Botswana
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // Calculate the final price
+            decimal exchangeRateMultiplier = (request.ExchangeRate ?? 0) / 100 + 1;
+            decimal finalPrice = (moldPrice + mainDiamondPrice + (secondaryDiamondPrice * (request.SecondaryDiamondCount ?? 0)) + (request.ProcessingPrice ?? 0)) * exchangeRateMultiplier;
+
+            finalPrice = Math.Floor(finalPrice / 100000) * 100000;
+            return Ok(finalPrice);
+        }
+
+        public class CalculatePriceRequest
+        {
+            public int ProductType { get; set; }
+            public string Material { get; set; }
+            public string Size { get; set; }
+            public decimal CaratWeight { get; set; }
+            public int? MainDiamondId { get; set; }
+            public int? SecondaryDiamondId { get; set; }
+            public int? SecondaryDiamondCount { get; set; }
+            public decimal? ProcessingPrice { get; set; }
+            public decimal? ExchangeRate { get; set; }
+        }
+
+
+
     }
 }

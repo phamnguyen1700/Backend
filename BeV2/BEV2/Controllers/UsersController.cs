@@ -1,6 +1,7 @@
 ﻿using BE_V2.DataDB;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -408,6 +409,16 @@ namespace BE_V2.Controllers
                 _context.Customers.Add(customer);
                 await _context.SaveChangesAsync();
 
+                // Add to CustomerPoints table
+                var customerPoints = new CustomerPoints
+                {
+                    CustomerID = customer.CustomerId,
+                    Points = 0,
+                    LastUpdated = DateTime.Now
+                };
+                _context.CustomerPoints.Add(customerPoints);
+                await _context.SaveChangesAsync();
+
                 return CreatedAtAction("GetUser", new { id = user.UserId }, user);
             }
             catch (DbUpdateException)
@@ -428,6 +439,136 @@ namespace BE_V2.Controllers
         {
             var roles = await _context.Roles.ToListAsync();
             return Ok(roles);
+        }
+
+
+        private async Task SendEmailAsync(string toEmail, string subject, string body)
+        {
+            var smtpSettings = _configuration.GetSection("Smtp");
+            var smtpServer = smtpSettings["Server"];
+            var smtpPort = int.Parse(smtpSettings["Port"]);
+            var smtpUsername = smtpSettings["Username"];
+            var smtpPassword = smtpSettings["Password"];
+            var enableSsl = bool.Parse(smtpSettings["EnableSsl"]);
+
+            var mail = new MailMessage();
+            mail.To.Add(new MailAddress(toEmail));
+            mail.From = new MailAddress(smtpUsername);
+            mail.Subject = subject;
+            mail.Body = body;
+            mail.IsBodyHtml = true;
+
+            var smtp = new SmtpClient(smtpServer, smtpPort)
+            {
+                Credentials = new NetworkCredential(smtpUsername, smtpPassword),
+                EnableSsl = enableSsl
+            };
+
+            try
+            {
+                await smtp.SendMailAsync(mail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending email");
+                throw;
+            }
+        }
+
+        [HttpPost("forgot-password/send-otp")]
+        public async Task<IActionResult> SendForgotPasswordOtp([FromBody] OtpRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                return BadRequest("Email not found");
+            }
+
+            var otp = new Random().Next(100000, 999999).ToString();
+            OtpStore[request.Email] = otp;
+
+            _logger.LogInformation($"Stored OTP for {request.Email}: {otp}");
+
+            var emailBody = $@"
+                <html>
+                <body>
+                    <h2>OTP Code for Password Reset</h2>
+                    <p>Dear {user.Username},</p>
+                    <p>We received a request to reset your password for your account. Your OTP code is:</p>
+                    <h3>{otp}</h3>
+                    <p>Please enter this code in the application to proceed with resetting your password.</p>
+                    <p>If you did not request a password reset, please ignore this email.</p>
+                    <p>Thank you,<br/>Lucas Diamond Team</p>
+                </body>
+                </html>";
+
+            try
+            {
+                await SendEmailAsync(request.Email, "Your OTP Code", emailBody);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error sending email: " + ex.Message);
+            }
+        }
+
+        [HttpPost("forgot-password/verify-otp")]
+        public IActionResult VerifyForgotPasswordOtp([FromBody] OtpVerificationRequest request)
+        {
+            _logger.LogInformation($"Verifying OTP for email: {request.Email}");
+
+            if (OtpStore.TryGetValue(request.Email, out var storedOtp))
+            {
+                _logger.LogInformation($"Stored OTP: {storedOtp}");
+                _logger.LogInformation($"Received OTP: {request.Otp}");
+
+                if (storedOtp == request.Otp)
+                {
+                    // OTP verified successfully, remove it from the store
+                    OtpStore.Remove(request.Email);
+                    return Ok(new { message = "OTP verified successfully" });
+                }
+                else
+                {
+                    return BadRequest(new { error = "Invalid OTP" });
+                }
+            }
+            else
+            {
+                return BadRequest(new { error = "OTP not found" });
+            }
+        }
+
+        [HttpPost("forgot-password/reset")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+            {
+                return BadRequest("Email not found");
+            }
+
+            // Check if the new password is the same as the old password
+            if (user.Password == request.NewPassword)
+            {
+                return BadRequest("New password cannot be the same as the old password");
+            }
+
+            // Update the password
+            user.Password = request.NewPassword;
+            _context.Users.Update(user);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Password reset successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password");
+                return StatusCode(500, "Error resetting password: " + ex.Message);
+            }
         }
 
         private bool UserExists(int id)
@@ -468,6 +609,12 @@ namespace BE_V2.Controllers
             public string Address { get; set; }
             public string Sex { get; set; }
             public DateTime DateOfBirth { get; set; }
+        }
+
+        public class ResetPasswordRequest
+        {
+            public string Email { get; set; }
+            public string NewPassword { get; set; }
         }
     }
 

@@ -9,6 +9,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SqlServer;
+using BE_V2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +86,9 @@ builder.Services.AddHangfire(configuration =>
 // Thêm máy chủ xử lý nền của Hangfire như một dịch vụ IHostedService
 builder.Services.AddHangfireServer();
 
+// Thêm các dịch vụ tùy chỉnh
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<OrderService>();
 var app = builder.Build();
 
 // Cấu hình pipeline xử lý HTTP
@@ -116,5 +120,5 @@ app.UseHangfireDashboard();
 
 // Lên lịch công việc nền chạy mỗi phút
 RecurringJob.AddOrUpdate<EventService>("cleanup-expired-events", service => service.CleanupExpiredEvents(), "*/1 * * * *");
-
+RecurringJob.AddOrUpdate<OrderService>("cleanup-orders", service => service.CleanupOrdersAsync(), "*/1 * * * *");
 app.Run();

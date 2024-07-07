@@ -29,7 +29,7 @@ namespace BE_V2.Migrations
                     Symmetry = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Girdle = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Measurements = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    Certificate = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
+                    Origin = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -152,6 +152,30 @@ namespace BE_V2.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Roles__8AFACE3A3AEE977B", x => x.RoleID);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Certificates",
+                columns: table => new
+                {
+                    CertificateId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DiamondId = table.Column<int>(type: "int", nullable: false),
+                    ReportDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReportNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ClarityCharacteristics = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Inscription = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Certificates", x => x.CertificateId);
+                    table.ForeignKey(
+                        name: "FK_Certificates_Diamond_DiamondId",
+                        column: x => x.DiamondId,
+                        principalTable: "Diamond",
+                        principalColumn: "DiamondID",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -333,7 +357,7 @@ namespace BE_V2.Migrations
                     CartID = table.Column<int>(type: "int", nullable: false),
                     ProductID = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(15,2)", nullable: false),
                     Size = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
@@ -409,7 +433,7 @@ namespace BE_V2.Migrations
                     OrderID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     CustomerID = table.Column<int>(type: "int", nullable: true),
-                    TotalPrice = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
+                    TotalPrice = table.Column<decimal>(type: "decimal(15,2)", nullable: true),
                     OrderDate = table.Column<DateOnly>(type: "date", nullable: true)
                 },
                 constraints: table =>
@@ -451,7 +475,7 @@ namespace BE_V2.Migrations
                     OrderID = table.Column<int>(type: "int", nullable: true),
                     ProductID = table.Column<int>(type: "int", nullable: true),
                     ProductName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    ProductPrice = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
+                    ProductPrice = table.Column<decimal>(type: "decimal(15,2)", nullable: true),
                     Quantity = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -503,9 +527,9 @@ namespace BE_V2.Migrations
                     PaymentID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     OrderID = table.Column<int>(type: "int", nullable: true),
-                    Deposit = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
-                    AmountPaid = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
-                    Total = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
+                    Deposit = table.Column<decimal>(type: "decimal(15,2)", nullable: true),
+                    AmountPaid = table.Column<decimal>(type: "decimal(15,2)", nullable: true),
+                    Total = table.Column<decimal>(type: "decimal(15,2)", nullable: true),
                     DatePaid = table.Column<DateOnly>(type: "date", nullable: true)
                 },
                 constraints: table =>
@@ -516,6 +540,28 @@ namespace BE_V2.Migrations
                         column: x => x.OrderID,
                         principalTable: "Orders",
                         principalColumn: "OrderID");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Warranties",
+                columns: table => new
+                {
+                    WarrantyId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    PurchaseDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    WarrantyEndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    StoreRepresentativeSignature = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Warranties", x => x.WarrantyId);
+                    table.ForeignKey(
+                        name: "FK_Warranties_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "OrderID",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -559,6 +605,12 @@ namespace BE_V2.Migrations
                 name: "IX_CartItem_ProductID",
                 table: "CartItem",
                 column: "ProductID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Certificates_DiamondId",
+                table: "Certificates",
+                column: "DiamondId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "UQ__Customer__1788CCAD7E4B64B6",
@@ -653,6 +705,11 @@ namespace BE_V2.Migrations
                 column: "RoleID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Warranties_OrderId",
+                table: "Warranties",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Wishlist_CustomerID",
                 table: "Wishlist",
                 column: "CustomerID");
@@ -673,6 +730,9 @@ namespace BE_V2.Migrations
         {
             migrationBuilder.DropTable(
                 name: "CartItem");
+
+            migrationBuilder.DropTable(
+                name: "Certificates");
 
             migrationBuilder.DropTable(
                 name: "CustomerPoints");
@@ -703,6 +763,9 @@ namespace BE_V2.Migrations
 
             migrationBuilder.DropTable(
                 name: "RingPriceTable");
+
+            migrationBuilder.DropTable(
+                name: "Warranties");
 
             migrationBuilder.DropTable(
                 name: "WishlistItems");

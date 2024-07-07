@@ -22,14 +22,18 @@ namespace BE_V2.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Diamond>>> GetDiamonds()
         {
-            return await _context.Diamonds.ToListAsync();
+            return await _context.Diamonds
+                .Include(d => d.Certificate) // Include related Certificate data
+                .ToListAsync();
         }
 
         // GET: api/Diamonds/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Diamond>> GetDiamond(int id)
         {
-            var diamond = await _context.Diamonds.FindAsync(id);
+            var diamond = await _context.Diamonds
+                .Include(d => d.Certificate) // Include related Certificate data
+                .FirstOrDefaultAsync(d => d.DiamondId == id);
 
             if (diamond == null)
             {
